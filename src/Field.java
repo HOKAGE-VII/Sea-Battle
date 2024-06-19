@@ -23,6 +23,7 @@ public class Field
 
     public void printBoard()
     {
+        System.out.println();
         System.out.print("   ");
         for (String col : COLUMN_LABELS)
         {
@@ -53,7 +54,7 @@ public class Field
                 if (y + size > SIZE - 1) return false; // Проверка на выход за границы
                 for (int i = 0; i < size; i++)
                 {
-                    if (!isCellValid(x + i, y))
+                    if (!isCellValid(x, y + i))
                     {
                         return false;
                     }
@@ -63,7 +64,7 @@ public class Field
                 if (x + size > SIZE - 1) return false; // Проверка на выход за границы
                 for (int i = 0; i < size; i++)
                 {
-                    if (!isCellValid(x, y + i))
+                    if (!isCellValid(x + i, y))
                     {
                         return false;
                     }
@@ -73,7 +74,7 @@ public class Field
                 if (y - size < 0) return false; // Проверка на выход за границы
                 for (int i = 0; i < size; i++)
                 {
-                    if (!isCellValid(x - i, y))
+                    if (!isCellValid(x, y - i))
                     {
                         return false;
                     }
@@ -83,7 +84,7 @@ public class Field
                 if (x - size < 0) return false; // Проверка на выход за границы
                 for (int i = 0; i < size; i++)
                 {
-                    if (!isCellValid(x, y - i))
+                    if (!isCellValid(x - i, y))
                     {
                         return false;
                     }
@@ -122,11 +123,41 @@ public class Field
         return true;
     }
 
-
-
-    public void addShipToField()
+    public void addShipToField(Ship ship)
     {
+        int x = ship.getX();
+        int y = ship.getY();
+        int rotation = ship.getRotation();
+        int size = ship.getSize();
 
+        switch (rotation)
+        {
+            case 0: // Вправо
+                for (int i = 0; i < size; i++)
+                {
+                    grid[x][y + i] = size;
+                }
+                break;
+            case 1: // Вниз
+                for (int i = 0; i < size; i++)
+                {
+                    grid[x + i][y] = size;
+                }
+                break;
+            case 2: // Влево
+                for (int i = 0; i < size; i++)
+                {
+                    grid[x][y - i] = size;
+                }
+                break;
+            case 3: // Вверх
+                for (int i = 0; i < size; i++)
+                {
+                    grid[x - i][y] = size;
+                }
+                break;
+            default:
+        }
     }
 
 }
