@@ -8,8 +8,8 @@ public class Ship
 
     public Ship(int x, int y, int rotation, int size)
     {
-        this.x = x;
-        this.y = y;
+        this.x = x - 1;     //массивы начинаются с 0, чтобы пользователю было проще вводить значения
+        this.y = y - 1;
         this.rotation = rotation;
         this.size = size;
     }
