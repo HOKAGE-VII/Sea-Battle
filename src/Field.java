@@ -1,23 +1,28 @@
 package src;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
 public class Field
 {
-    private static final List<String> COLUMN_LABELS =
+    public static final List<String> COLUMN_LABELS =
             Arrays.asList("А", "Б", "В", "Г", "Д", "Е", "Ж", "З", "И", "К", "Л", "М", "Н", "О", "П", "Р");
-    private static final int[] SHIP_SIZES =
+    public static final int[] SHIP_SIZES =
             {6, 5, 5, 4, 4, 4, 3, 3, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1};    // размеры кораблей
-    private static final int FIELD_SIZE = 16;                                   // размер поля
+    public static final int FIELD_SIZE = 16;                                   // размер поля
+
+    public static final char HIT_MARK = 'X';                                    // представление подбитой клетки
+    public static final char EMPTY_MARK = '.';                                  // представление пустой клетки
+    public static final char SHIP_MARK = 'O';                                   // представление пустой клетки
+
     private char[][] grid;                                                      // игровое поле
-    private static final char HIT_MARK = 'X';                                   // представление подбитой клетки
-    private static final char EMPTY_MARK = '.';                                 // представление пустой клетки
-    private static final char SHIP_MARK = 'O';                                  // представление пустой клетки
+    private List<Ship> ships;                                                   // список кораблей
     public Field()
     {
         grid = new char[FIELD_SIZE][FIELD_SIZE];
+        ships = new ArrayList<Ship>();
         resetField();
     }
 
@@ -144,48 +149,98 @@ public class Field
                 {
                     grid[x][y + i] = SHIP_MARK;
                 }
+                ships.add(ship);
                 break;
             case 1: // Вниз
                 for (int i = 0; i < size; i++)
                 {
                     grid[x + i][y] = SHIP_MARK;
                 }
+                ships.add(ship);
                 break;
             case 2: // Влево
                 for (int i = 0; i < size; i++)
                 {
                     grid[x][y - i] = SHIP_MARK;
                 }
+                ships.add(ship);
                 break;
             case 3: // Вверх
                 for (int i = 0; i < size; i++)
                 {
                     grid[x - i][y] = SHIP_MARK;
                 }
+                ships.add(ship);
                 break;
             default:
         }
     }
 
-    public void autoShipSetup()
+    public Ship getShipFromHit(int x, int y)
     {
-        Random random = new Random();
-        for (int size : SHIP_SIZES)
+        for (Ship ship : ships) {
+            if (isHit(ship, x, y))
+                return ship;
+        }
+        return null;
+    }
+
+    public int receiveAttack(String coordinates) {
+        int x = Integer.parseInt(coordinates.substring(1)) - 1;
+        int y = COLUMN_LABELS.indexOf(coordinates.substring(0, 1));
+
+        if (grid[x][y] == EMPTY_MARK)
+            return 0;   // мимо
+
+        else if (grid[x][y] == SHIP_MARK)
         {
-            boolean placed = false;
-            while (!placed) {
-                int x = random.nextInt(FIELD_SIZE);
-                int y = random.nextInt(FIELD_SIZE);
-                int horizontal = random.nextInt(2);
-
-                Ship ship = new Ship(x, y, horizontal, size);
-
-                if (checkShipFits(ship))
-                {
-                    addShipToField(ship);
-                    placed = true;
+            for (Ship ship : ships) {
+                if (isHit(ship, x, y)) {
+                    ship.hit();
+                    if (ship.isSunk())
+                        return 1;   // убил
+                    else
+                        return 2;   // попал
                 }
             }
         }
+        return -1;  // ошибка
+    }
+
+    private boolean isHit(Ship ship, int x, int y) {
+        int shipX = ship.getX();
+        int shipY = ship.getY();
+        int rotation = ship.getRotation();
+        int size = ship.getSize();
+
+        for (int i = 0; i < size; i++) {
+            int currentX = shipX;
+            int currentY = shipY;
+
+            switch (rotation) {
+                case 0:
+                    currentY += i;
+                    break;
+                case 1:
+                    currentX += i;
+                    break;
+                case 2:
+                    currentY -= i;
+                    break;
+                case 3:
+                    currentX -= i;
+                    break;
+            }
+
+            if (currentX == x && currentY == y) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void markField(int x, int y, char mark)
+    {
+        grid[x][y] = mark;
     }
 }
