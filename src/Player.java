@@ -1,30 +1,30 @@
 package src;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 
 public class Player
 {
-    private String name;                // имя игрока
-    private boolean isBot;              // является ли игрок ботом
-    private Field player_field;         // поле игрока
-    private Field opponent_field;       // поле противника
+    public static final int[] SHIP_SIZES =
+            {6, 5, 5, 4, 4, 4, 3, 3, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1};    // список размеров кораблей
+    protected String name;                                                        // имя игрока
+    protected Field player_field;                                                 // поле игрока
+    protected Field opponent_field;                                               // поле противника
+    protected List<Ship> ships;
 
-    public Player(String name, boolean isBot)
+    public Player(String name)
     {
         this.name = name;
-        this.isBot = isBot;
         this.player_field = new Field();
         this.opponent_field = new Field();
+        this.ships = new ArrayList<>();
     }
 
     public String getName()
     {
         return name;
-    }
-
-    public boolean isBot() {
-        return isBot;
     }
 
     public Field getPlayer_field() {
@@ -38,23 +38,21 @@ public class Player
     public void setupShips()
     {
         Scanner scanner = new Scanner(System.in);
-        System.out.println("Введите способ расстановки кораблей:");
-        System.out.println("Ручная - 1");
-        System.out.println("Автоматическая - 2");
-        int shipSetup = Integer.parseInt(scanner.nextLine());
+        System.out.println(name + ", выберите способ расстановки кораблей: (1) Вручную, (2) Автоматически");
+        int choice = scanner.nextInt();
+        scanner.nextLine();
 
-        if (shipSetup == 1)
-            manualShipSetup();
-        else if (shipSetup == 2) {
-            autoShipSetup();
-            player_field.printBoard();
+        if (choice == 1) {
+            setupShipsManually();
+        } else {
+            setupShipsAutomatically();
         }
     }
 
-    public void autoShipSetup()
+    public void setupShipsAutomatically()
     {
         Random random = new Random();
-        for (int size : Field.SHIP_SIZES)
+        for (int size : SHIP_SIZES)
         {
             boolean placed = false;
             while (!placed) {
@@ -67,23 +65,26 @@ public class Player
                 if (player_field.checkShipFits(ship))
                 {
                     player_field.addShipToField(ship);
+                    ships.add(ship);
                     placed = true;
                 }
             }
         }
+        player_field.printField();
     }
 
-    public void manualShipSetup() {
+    public void setupShipsManually() {
         Scanner scanner = new Scanner(System.in);
-        for (int i = 0; i < Field.SHIP_SIZES.length; i++) {
-            int shipSize = Field.SHIP_SIZES[i];
+        for (int size : SHIP_SIZES) {
             boolean placed = false;
             do {
                 try {
-                    System.out.printf("Введите координаты для корабля размера %d\n", shipSize);
+                    System.out.printf("Введите начальную координату для корабля размера %d\n", size);
+
                     String coordinates = scanner.nextLine().toUpperCase();
                     int rotation = 0;
-                    if (shipSize != 1)
+
+                    if (size > 1)
                     {
                         System.out.print("Введите направление (0 - вправо, 1 - вниз, 2 - влево, 3 - вверх): ");
                         rotation = Integer.parseInt(scanner.nextLine());
@@ -92,12 +93,13 @@ public class Player
                     int x = Integer.parseInt(coordinates.substring(1));
                     int y = Field.COLUMN_LABELS.indexOf(coordinates.substring(0, 1)) + 1;
 
-                    Ship ship = new Ship(x, y, rotation, shipSize);
+                    Ship ship = new Ship(x, y, rotation, size);
                     if (player_field.checkShipFits(ship))
                     {
                         player_field.addShipToField(ship);
+                        ships.add(ship);
                         placed = true;
-                        player_field.printBoard();
+                        player_field.printField();
                     }
                     else
                     {
@@ -110,47 +112,68 @@ public class Player
         }
     }
 
-    public void botMakeMove(Player opponent) {
-
-    }
-    public void makeMove(Player opponent) {
+    // TODO: подправить логику, чтобы возвращались нормальные значения
+    public boolean makeMove(Player opponent) {
         Scanner scanner = new Scanner(System.in);
-        String coordinates;
-        int result;
-
-        System.out.println("\nХод игрока " + name);
-
+        boolean input = false;
         do {
-            System.out.print("Введите координаты для атаки: ");
-            coordinates = scanner.nextLine().toUpperCase();
-            int x = Integer.parseInt(coordinates.substring(1));
-            int y = Field.COLUMN_LABELS.indexOf(coordinates.substring(0, 1)) + 1;
-            result = opponent.getOpponent_field().receiveAttack(coordinates);
+            try {
+                System.out.println(name + ", ваш ход.");
+                System.out.println("Введите координату для атаки:");
+                String coordinates = scanner.nextLine().toUpperCase();
 
-            switch (result) {
-                case 0:
-                    System.out.println("Мимо!");
-                    opponent_field.markField(x, y, Field.EMPTY_MARK);
-                    opponent.getOpponent_field().markField(x, y, Field.EMPTY_MARK);
-                    break;
-                case 1:
-                    System.out.println("Убил!");
-                    //opponent.getOpponent_field().
-                    //opponent.getOpponent_field().;
-                    break;
-                case 2:
-                    System.out.println("Ранил!");
-                    opponent_field.markField(x, y, Field.HIT_MARK);
-                    opponent.getOpponent_field().markField(x, y, Field.HIT_MARK);
-                    break;
-                default:
-                    System.out.println("Ошибка при обработке хода.");
-                    break;
+                int x = Integer.parseInt(coordinates.substring(1)) - 1;
+                int y = Field.COLUMN_LABELS.indexOf(coordinates.substring(0, 1));
+
+                if (opponent_field.isCellValid_2(x, y))
+                {
+                    int hit = opponent.getPlayer_field().receiveAttack(x, y);
+                    if (hit == 0)
+                    {
+                        opponent_field.markField(x, y, Field.MISS_MARK);
+                        System.out.println("Мимо.");
+                        return false;
+                    }
+                    else if (hit == 1)
+                    {
+                        opponent_field.markField(x, y, Field.HIT_MARK);
+                        opponent_field.markShipSunk(opponent.getPlayer_field().getShipFromCoord(x, y));
+                        System.out.println("Убил.");
+                        return true;
+                    }
+                    else if (hit == 2)
+                    {
+                        opponent_field.markField(x, y, Field.HIT_MARK);
+                        System.out.println("Попал.");
+                        return true;
+                    }
+                    else if (hit == -1)
+                    {
+                        System.out.println("Ошибка.");
+                        return true;
+                    }
+                    input = true;
+                }
+                else
+                {
+                    System.out.println("Неверная координата. Попробуйте снова.");
+                }
             }
-        } while (result == -1);
+            catch (Exception e)
+            {
+                System.out.println("Ошибка при вводе координат. Попробуйте ещё раз.");
+            }
+        } while (!input);
+        return false;
+    }
 
-        player_field.printBoard();
-        opponent.getOpponent_field().printBoard();
+    public boolean allShipsSunk()
+    {
+        for (Ship ship : ships) {
+            if (ship.getSize() != ship.getHits())
+                return false;
+        }
+        return true;
     }
 
 }

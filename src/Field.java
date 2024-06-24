@@ -3,22 +3,19 @@ package src;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 
 public class Field
 {
     public static final List<String> COLUMN_LABELS =
             Arrays.asList("А", "Б", "В", "Г", "Д", "Е", "Ж", "З", "И", "К", "Л", "М", "Н", "О", "П", "Р");
-    public static final int[] SHIP_SIZES =
-            {6, 5, 5, 4, 4, 4, 3, 3, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1};    // размеры кораблей
-    public static final int FIELD_SIZE = 16;                                   // размер поля
+    public static final int FIELD_SIZE = 16;                // размер поля
+    public static final char EMPTY_MARK = ' ';              // метка пустой клетки
+    public static final char HIT_MARK = 'X';                // метка подбитой клетки
+    public static final char MISS_MARK = '.';               // метка промаха
+    public static final char SHIP_MARK = 'O';               // метка корабля
+    private char[][] grid;                                  // игровое поле\
+    private List<Ship> ships;
 
-    public static final char HIT_MARK = 'X';                                    // представление подбитой клетки
-    public static final char EMPTY_MARK = '.';                                  // представление пустой клетки
-    public static final char SHIP_MARK = 'O';                                   // представление пустой клетки
-
-    private char[][] grid;                                                      // игровое поле
-    private List<Ship> ships;                                                   // список кораблей
     public Field()
     {
         grid = new char[FIELD_SIZE][FIELD_SIZE];
@@ -33,9 +30,8 @@ public class Field
         }
     }
 
-    public void printBoard()
+    public void printField()
     {
-        System.out.println();
         System.out.print("   ");
         for (String col : COLUMN_LABELS)
         {
@@ -51,6 +47,7 @@ public class Field
             }
             System.out.println();
         }
+        System.out.println();
     }
 
     public boolean checkShipFits(Ship ship)
@@ -109,7 +106,23 @@ public class Field
         return true;
     }
 
-    private boolean isCellValid(int x, int y)
+    // TODO: Что то сделать с функциями isCellValid и isCellValid_2
+    public boolean isCellValid_2(int x, int y)
+    {
+        // Проверка на выход за границы поля
+        if (x < 0 || x >= FIELD_SIZE || y < 0 || y >= FIELD_SIZE)
+        {
+            return false;
+        }
+        //  Проверка на занятость клетки
+        if (grid[x][y] != EMPTY_MARK)
+        {
+            return false;
+        }
+        return true;
+    }
+
+    public boolean isCellValid(int x, int y)
     {
         // Проверка на выход за границы поля
         if (x < 0 || x >= FIELD_SIZE || y < 0 || y >= FIELD_SIZE)
@@ -176,29 +189,64 @@ public class Field
         }
     }
 
-    public Ship getShipFromHit(int x, int y)
-    {
-        for (Ship ship : ships) {
-            if (isHit(ship, x, y))
-                return ship;
+    public void markShipSunk(Ship ship) {
+        int x = ship.getX();
+        int y = ship.getY();
+        int rotation = ship.getRotation();
+        int size = ship.getSize();
+        int ySize = 1;
+        int xSize = 1;
+
+        switch (rotation) {
+            case 0: // Вправо
+                ySize = size;
+                break;
+            case 1: // Вниз
+                xSize = size;
+                break;
+            case 2: // Влево
+                y = y - size;
+                ySize = size;
+                break;
+            case 3: // Вверх
+                x = x - size;
+                xSize = size;
+                break;
+            default:
         }
-        return null;
+
+        for (int i = Math.max(0, x - 1); i <= Math.min(FIELD_SIZE - 1, x + xSize); i++)
+        {
+            for (int j = Math.max(0, y - 1); j <= Math.min(FIELD_SIZE - 1, y + ySize); j++)
+            {
+                if (grid[i][j] == EMPTY_MARK)
+                    grid[i][j] = MISS_MARK;
+            }
+        }
     }
 
-    public int receiveAttack(String coordinates) {
-        int x = Integer.parseInt(coordinates.substring(1)) - 1;
-        int y = COLUMN_LABELS.indexOf(coordinates.substring(0, 1));
+    public void markField(int x, int y, char mark)
+    {
+        grid[x][y] = mark;
+    }
 
-        if (grid[x][y] == EMPTY_MARK)
+    public int receiveAttack(int x, int y) {
+        if (grid[x][y] == EMPTY_MARK) {
+            grid[x][y] = MISS_MARK;
             return 0;   // мимо
-
+        }
         else if (grid[x][y] == SHIP_MARK)
         {
-            for (Ship ship : ships) {
-                if (isHit(ship, x, y)) {
+            for (Ship ship : ships)
+            {
+                if (isHit(ship, x, y))
+                {
                     ship.hit();
-                    if (ship.isSunk())
+                    grid[x][y] = HIT_MARK;
+                    if (ship.isSunk()) {
+                        markShipSunk(ship);
                         return 1;   // убил
+                    }
                     else
                         return 2;   // попал
                 }
@@ -207,7 +255,7 @@ public class Field
         return -1;  // ошибка
     }
 
-    private boolean isHit(Ship ship, int x, int y) {
+    public boolean isHit(Ship ship, int x, int y) {
         int shipX = ship.getX();
         int shipY = ship.getY();
         int rotation = ship.getRotation();
@@ -239,8 +287,15 @@ public class Field
         return false;
     }
 
-    public void markField(int x, int y, char mark)
+    public Ship getShipFromCoord(int x, int y)
     {
-        grid[x][y] = mark;
+        for (Ship ship : ships)
+        {
+            if (isHit(ship, x, y))
+            {
+                return ship;
+            }
+        }
+        return null;
     }
 }
